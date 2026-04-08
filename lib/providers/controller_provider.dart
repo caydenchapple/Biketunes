@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/models/controller_state.dart';
 import 'package:biketunes/providers/bluetooth_provider.dart';
-import 'package:biketunes/services/bluetooth_service.dart';
+import 'package:biketunes/services/bluetooth_service.dart' show DongleService, DongleConnectionState;
 import 'package:biketunes/services/protocol_service.dart';
 import 'package:biketunes/services/storage_service.dart';
 import 'package:biketunes/utils/packet_parser.dart';
@@ -12,7 +12,7 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 });
 
 class ControllerNotifier extends StateNotifier<ControllerState> {
-  final BluetoothService _bluetooth;
+  final DongleService _bluetooth;
   final StorageService _storage;
 
   StreamSubscription? _dataSub;
@@ -129,7 +129,7 @@ class ControllerNotifier extends StateNotifier<ControllerState> {
     if (update.wheelRatio != null) next = next.copyWith(wheelRatio: update.wheelRatio);
     if (update.rateRatio != null && update.rateRatio! > 0) next = next.copyWith(rateRatio: update.rateRatio);
 
-    if (update.maxSpeedRaw != null) next = next.copyWith(maxSpeedRaw: update.maxSpeedRaw);
+    if (update.maxSpeed != null) next = next.copyWith(maxSpeedRaw: update.maxSpeed);
     if (update.maxLineCurrRaw != null) next = next.copyWith(maxLineCurrRaw: update.maxLineCurrRaw);
     if (update.zeroBattCoeff != null) next = next.copyWith(zeroBattCoeff: update.zeroBattCoeff);
     if (update.fullBattCoeff != null) next = next.copyWith(fullBattCoeff: update.fullBattCoeff);

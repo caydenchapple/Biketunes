@@ -115,7 +115,7 @@ class BikeTunesApp extends StatelessWidget {
           statusBarIconBrightness: Brightness.light,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -156,7 +156,7 @@ class BikeTunesApp extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

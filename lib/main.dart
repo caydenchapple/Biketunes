@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/app.dart';
 import 'package:biketunes/providers/controller_provider.dart';
-import 'package:biketunes/providers/stats_provider.dart';
 import 'package:biketunes/services/storage_service.dart';
 
 Future<void> main() async {

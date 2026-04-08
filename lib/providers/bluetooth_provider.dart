@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/services/bluetooth_service.dart';
 
 // Singleton bluetooth service
-final bluetoothServiceProvider = Provider<BluetoothService>((ref) {
-  final service = BluetoothService();
+final bluetoothServiceProvider = Provider<DongleService>((ref) {
+  final service = DongleService();
   ref.onDispose(service.dispose);
   return service;
 });

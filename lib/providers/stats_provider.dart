@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/models/ride_stats.dart';
 import 'package:biketunes/providers/bluetooth_provider.dart';
+import 'package:biketunes/services/bluetooth_service.dart' show DongleConnectionState;
 import 'package:biketunes/providers/controller_provider.dart';
 import 'package:biketunes/services/storage_service.dart';
 

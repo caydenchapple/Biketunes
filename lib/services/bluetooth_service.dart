@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' hide BluetoothService;
 
 // BLE UART service/characteristic UUIDs for HM-10/HC-08 style dongles
 const _uartServiceUuid = '0000ffe0-0000-1000-8000-00805f9b34fb';
@@ -32,7 +31,7 @@ class DiscoveredDongle {
   });
 }
 
-class BluetoothService {
+class DongleService {
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _writeChar;
   BluetoothCharacteristic? _notifyChar;
@@ -189,36 +188,45 @@ class BluetoothService {
   }
 
   Future<bool> _setupUartService(
-    List<BluetoothService> services,
+    List<Object> services,
     String serviceUuid,
     String writeCharUuid,
     String notifyCharUuid,
   ) async {
-    final service = services.firstWhereOrNull(
-      (s) => s.uuid.toString().toLowerCase() == serviceUuid,
-    );
-    if (service == null) return false;
-
-    final writeChar = service.characteristics.firstWhereOrNull(
-      (c) => c.uuid.toString().toLowerCase() == writeCharUuid,
-    );
-    final notifyChar = service.characteristics.firstWhereOrNull(
-      (c) => c.uuid.toString().toLowerCase() == notifyCharUuid,
-    );
-
-    if (writeChar == null || notifyChar == null) return false;
-
-    _writeChar = writeChar;
-    _notifyChar = notifyChar;
-
-    await notifyChar.setNotifyValue(true);
-    _notifySubscription = notifyChar.onValueReceived.listen((data) {
-      if (data.isNotEmpty) {
-        _rawDataController.add(List<int>.from(data));
+    BluetoothCharacteristic? findChar(
+        List<BluetoothCharacteristic> chars, String uuid) {
+      for (final c in chars) {
+        if (c.uuid.toString().toLowerCase() == uuid) return c;
       }
-    });
+      return null;
+    }
 
-    return true;
+    for (final svc in services) {
+      // Access fbp BluetoothService fields via dynamic to avoid class name conflict
+      final svcUuid = (svc as dynamic).uuid.toString().toLowerCase();
+      if (svcUuid != serviceUuid) continue;
+
+      final chars = List<BluetoothCharacteristic>.from(
+          (svc as dynamic).characteristics as List);
+      final writeChar = findChar(chars, writeCharUuid);
+      final notifyChar = findChar(chars, notifyCharUuid);
+
+      if (writeChar == null || notifyChar == null) return false;
+
+      _writeChar = writeChar;
+      _notifyChar = notifyChar;
+
+      await notifyChar.setNotifyValue(true);
+      _notifySubscription = notifyChar.onValueReceived.listen((data) {
+        if (data.isNotEmpty) {
+          _rawDataController.add(List<int>.from(data));
+        }
+      });
+
+      return true;
+    }
+
+    return false;
   }
 
   /// Writes bytes to the UART write characteristic.
@@ -266,14 +274,5 @@ class BluetoothService {
     _connectionStateController.close();
     _rawDataController.close();
     _scanResultsController.close();
-  }
-}
-
-extension _ListExt<T> on List<T> {
-  T? firstWhereOrNull(bool Function(T) test) {
-    for (final e in this) {
-      if (test(e)) return e;
-    }
-    return null;
   }
 }
