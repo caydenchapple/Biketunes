@@ -440,9 +440,11 @@ class _DashTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Always use km/h on dashboard, unit conversion shown per-tile
-    final maxSpeedDisplay =
-        controllerState.maxSpeedRaw > 0 ? 100.0 : 80.0;
+    final speedMph = UnitConverter.kphToMph(controllerState.speedKph);
+    final topSpeedMph = UnitConverter.kphToMph(sessionTopSpeed);
+    final maxSpeedMph = controllerState.maxSpeedRaw > 0
+        ? UnitConverter.kphToMph(100.0)
+        : UnitConverter.kphToMph(80.0);
 
     final estimatedRange = UnitConverter.estimatedRangeKm(
       batteryPercent: controllerState.batteryPercent,
@@ -461,10 +463,10 @@ class _DashTab extends StatelessWidget {
             width: double.infinity,
             height: 240,
             child: SpeedometerGauge(
-              speed: controllerState.speedKph,
-              maxSpeed: maxSpeedDisplay,
-              topSpeed: sessionTopSpeed,
-              unit: 'km/h',
+              speed: speedMph,
+              maxSpeed: maxSpeedMph,
+              topSpeed: topSpeedMph,
+              unit: 'mph',
             ),
           ),
 
@@ -483,6 +485,7 @@ class _DashTab extends StatelessWidget {
               percentage: controllerState.batteryPercent,
               voltageV: controllerState.voltageV,
               estimatedRangeKm: estimatedRange > 0 ? estimatedRange : null,
+              useMph: true,
             ),
           ),
 
