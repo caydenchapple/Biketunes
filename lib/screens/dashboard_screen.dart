@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' show FlutterBluePlus, BluetoothAdapterState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/models/controller_state.dart';
 import 'package:biketunes/providers/bluetooth_provider.dart';
@@ -44,14 +45,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Track session top speed
     if (controllerState.speedKph > _sessionTopSpeed) {
       _sessionTopSpeed = controllerState.speedKph;
-    }
-
-    // Auto-navigate to connect tab on disconnect (instead of leaving the dashboard)
-    if (connectionState == DongleConnectionState.disconnected &&
-        _selectedIndex != _connectTabIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _selectedIndex = _connectTabIndex);
-      });
     }
 
     return Scaffold(
@@ -166,6 +159,14 @@ class _ConnectTabState extends ConsumerState<_ConnectTab> {
 
   Future<void> _startScan() async {
     setState(() => _isScanning = true);
+    final adapterState = await FlutterBluePlus.adapterState
+        .firstWhere((s) => s != BluetoothAdapterState.unknown)
+        .timeout(const Duration(seconds: 5),
+            onTimeout: () => BluetoothAdapterState.unavailable);
+    if (adapterState != BluetoothAdapterState.on) {
+      if (mounted) setState(() => _isScanning = false);
+      return;
+    }
     final service = ref.read(bluetoothServiceProvider);
     await service.startScan(timeout: const Duration(seconds: 10));
     if (mounted) setState(() => _isScanning = false);

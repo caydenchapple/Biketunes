@@ -26,7 +26,7 @@ class BikeTunesApp extends StatelessWidget {
       title: 'BikeTunes',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      initialRoute: '/',
+      initialRoute: '/dashboard',
       routes: {
         '/': (_) => const ConnectionScreen(),
         '/dashboard': (_) => const DashboardScreen(),

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/models/tuning_profile.dart';
 import 'package:biketunes/providers/controller_provider.dart';
 import 'package:biketunes/providers/tuning_provider.dart';
-import 'package:biketunes/widgets/power_curve_editor.dart';
+import 'package:biketunes/utils/unit_converter.dart';
 
 class TuningScreen extends ConsumerWidget {
   const TuningScreen({super.key});
@@ -47,7 +47,7 @@ class TuningScreen extends ConsumerWidget {
               _WarningBanner(isMoving: isMoving),
               const SizedBox(height: 20),
 
-              // Preset buttons
+              // Presets
               _SectionHeader(title: 'PRESETS'),
               const SizedBox(height: 10),
               _PresetRow(
@@ -56,59 +56,53 @@ class TuningScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Sliders
-              _SectionHeader(title: 'PARAMETERS'),
+              // Controls
+              _SectionHeader(title: 'CONTROLS'),
               const SizedBox(height: 14),
 
+              // Max Speed
               _TuningSlider(
                 label: 'Max Speed',
-                value: profile.maxSpeedKph,
-                min: 10,
-                max: 100,
-                unit: 'km/h',
-                displayValue: profile.maxSpeedKph.toStringAsFixed(0),
-                onChanged: notifier.updateMaxSpeed,
+                icon: Icons.speed,
+                value: UnitConverter.kphToMph(profile.maxSpeedKph),
+                min: UnitConverter.kphToMph(10),
+                max: UnitConverter.kphToMph(100),
+                unit: 'mph',
+                displayValue: UnitConverter.kphToMph(profile.maxSpeedKph).toStringAsFixed(0),
+                onChanged: (mph) => notifier.updateMaxSpeed(UnitConverter.mphToKph(mph)),
                 accentColor: const Color(0xFF00E5FF),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
+              // Peak Torque — maps to phase current (20–400 A → 0–100%)
               _TuningSlider(
-                label: 'Max Line Current',
-                value: profile.maxLineCurrA,
-                min: 10,
-                max: 200,
-                unit: 'A',
-                displayValue: profile.maxLineCurrA.toStringAsFixed(0),
-                onChanged: notifier.updateMaxLineCurr,
-                accentColor: const Color(0xFF39FF14),
-                warningThreshold: 150,
-              ),
-              const SizedBox(height: 16),
-
-              _TuningSlider(
-                label: 'Max Phase Current',
-                value: profile.maxPhaseCurrA,
-                min: 20,
-                max: 400,
-                unit: 'A',
-                displayValue: profile.maxPhaseCurrA.toStringAsFixed(0),
-                onChanged: notifier.updateMaxPhaseCurr,
-                accentColor: const Color(0xFF39FF14),
-                warningThreshold: 300,
-              ),
-              const SizedBox(height: 16),
-
-              _TuningSlider(
-                label: 'Regen Strength',
-                value: profile.regenStrength,
-                min: 0,
-                max: 1,
+                label: 'Peak Torque',
+                icon: Icons.rotate_right,
+                value: (profile.maxPhaseCurrA / 400.0 * 100).clamp(0, 100),
+                min: 5,
+                max: 100,
                 unit: '%',
-                displayValue: (profile.regenStrength * 100).toStringAsFixed(0),
-                onChanged: notifier.updateRegen,
-                accentColor: const Color(0xFFFF9800),
+                displayValue: (profile.maxPhaseCurrA / 400.0 * 100).clamp(0, 100).toStringAsFixed(0),
+                onChanged: (pct) => notifier.updateMaxPhaseCurr((pct / 100.0 * 400.0).clamp(20, 400)),
+                accentColor: const Color(0xFF39FF14),
+                warningThreshold: 80,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Peak Power — maps to line current (10–200 A × 72 V = 0.7–14.4 kW)
+              _TuningSlider(
+                label: 'Peak Power',
+                icon: Icons.electric_bolt,
+                value: (profile.maxLineCurrA * 72.0 / 1000.0).clamp(0.7, 14.4),
+                min: 0.7,
+                max: 14.4,
+                unit: 'kW',
+                displayValue: (profile.maxLineCurrA * 72.0 / 1000.0).toStringAsFixed(1),
+                onChanged: (kw) => notifier.updateMaxLineCurr((kw * 1000.0 / 72.0).clamp(10, 200)),
+                accentColor: const Color(0xFFFF9800),
+                warningThreshold: 11.0,
+              ),
+              const SizedBox(height: 24),
 
               // Throttle response
               _SectionHeader(title: 'THROTTLE RESPONSE'),
@@ -116,25 +110,6 @@ class TuningScreen extends ConsumerWidget {
               _ThrottleResponseSelector(
                 value: profile.throttleResponse,
                 onChanged: notifier.updateThrottleResponse,
-              ),
-              const SizedBox(height: 24),
-
-              // Power curve
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111518),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF1A2030)),
-                ),
-                child: PowerCurveEditor(
-                  points: profile.powerCurve,
-                  onChanged: (points) {
-                    for (int i = 0; i < points.length; i++) {
-                      notifier.updatePowerCurvePoint(i, points[i]);
-                    }
-                  },
-                ),
               ),
               const SizedBox(height: 28),
 
@@ -292,8 +267,9 @@ class TuningScreen extends ConsumerWidget {
             ],
             Text(
               'Writing to: ${profile.name}\n'
-              'Max Speed: ${profile.maxSpeedKph.toStringAsFixed(0)} km/h\n'
-              'Max Current: ${profile.maxLineCurrA.toStringAsFixed(0)} A',
+              'Max Speed: ${UnitConverter.kphToMph(profile.maxSpeedKph).toStringAsFixed(0)} mph\n'
+              'Peak Torque: ${(profile.maxPhaseCurrA / 400.0 * 100).toStringAsFixed(0)}%\n'
+              'Peak Power: ${(profile.maxLineCurrA * 72.0 / 1000.0).toStringAsFixed(1)} kW',
               style: const TextStyle(
                 color: Color(0xFF8899AA),
                 fontSize: 13,
@@ -498,6 +474,7 @@ class _PresetRow extends StatelessWidget {
 
 class _TuningSlider extends StatelessWidget {
   final String label;
+  final IconData icon;
   final double value;
   final double min;
   final double max;
@@ -509,6 +486,7 @@ class _TuningSlider extends StatelessWidget {
 
   const _TuningSlider({
     required this.label,
+    required this.icon,
     required this.value,
     required this.min,
     required this.max,
@@ -526,13 +504,13 @@ class _TuningSlider extends StatelessWidget {
     final color = _isWarning ? const Color(0xFFFF9800) : accentColor;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       decoration: BoxDecoration(
         color: const Color(0xFF111518),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isWarning
-              ? const Color(0xFFFF9800).withOpacity(0.3)
+              ? const Color(0xFFFF9800).withOpacity(0.35)
               : const Color(0xFF1A2030),
         ),
       ),
@@ -540,34 +518,57 @@ class _TuningSlider extends StatelessWidget {
         children: [
           Row(
             children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const SizedBox(width: 12),
               Text(
                 label,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Text(
-                '$displayValue $unit',
+                '$displayValue',
                 style: TextStyle(
                   color: color,
-                  fontSize: 18,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                    color: color.withOpacity(0.7),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           SliderTheme(
             data: SliderThemeData(
-              trackHeight: 4,
+              trackHeight: 3,
               activeTrackColor: color,
               inactiveTrackColor: const Color(0xFF1A2030),
               thumbColor: color,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-              overlayColor: color.withOpacity(0.2),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+              overlayColor: color.withOpacity(0.15),
             ),
             child: Slider(
               value: value.clamp(min, max),
@@ -579,34 +580,25 @@ class _TuningSlider extends StatelessWidget {
               },
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${min.toStringAsFixed(0)} $unit',
-                style: const TextStyle(
-                  color: Color(0xFF2A3548),
-                  fontSize: 10,
-                ),
-              ),
-              if (_isWarning)
-                const Text(
-                  '⚠ High — monitor temps',
-                  style: TextStyle(
-                    color: Color(0xFFFF9800),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+          if (_isWarning)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const SizedBox(width: 4),
+                  const Icon(Icons.warning_amber, color: Color(0xFFFF9800), size: 12),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'High — monitor temps closely',
+                    style: TextStyle(
+                      color: Color(0xFFFF9800),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              Text(
-                '${max.toStringAsFixed(0)} $unit',
-                style: const TextStyle(
-                  color: Color(0xFF2A3548),
-                  fontSize: 10,
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );

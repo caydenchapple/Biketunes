@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' show FlutterBluePlus, BluetoothAdapterState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:biketunes/providers/bluetooth_provider.dart';
 import 'package:biketunes/services/bluetooth_service.dart';
@@ -23,6 +24,17 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
 
   Future<void> _startScan() async {
     setState(() => _isScanning = true);
+    // Wait until the BT adapter is on (handles macOS/iOS initialization delay)
+    final adapterState = await FlutterBluePlus.adapterState
+        .firstWhere((s) => s != BluetoothAdapterState.unknown)
+        .timeout(const Duration(seconds: 5), onTimeout: () => BluetoothAdapterState.unavailable);
+    if (adapterState != BluetoothAdapterState.on) {
+      if (mounted) {
+        setState(() => _isScanning = false);
+        _showError('Bluetooth is off. Please enable Bluetooth and try again.');
+      }
+      return;
+    }
     final service = ref.read(bluetoothServiceProvider);
     await service.startScan(timeout: const Duration(seconds: 10));
     if (mounted) setState(() => _isScanning = false);
