@@ -1,26 +1,26 @@
-# VargTune
+# BikeTunes
 
-A production-ready Flutter app for tuning FarDriver motor controllers on electric dirt bikes (e.g. bfmacsme 3500W 48V/60V mid-drive). Connects via Bluetooth BLE UART and implements the reverse-engineered FarDriver serial protocol.
+A production-ready Flutter app for tuning FarDriver motor controllers on electric dirt bikes. Connects via Bluetooth BLE UART and implements the reverse-engineered FarDriver serial protocol.
 
 ## Features
 
 - **Live Telemetry Dashboard** — speed, voltage, current, power, temperatures, battery %
-- **Controller Tuning** — max speed, max current, phase current, regen strength, throttle response
+- **Controller Tuning** — max speed (mph), peak torque (%), peak power (kW), throttle response
 - **Ride Mode Presets** — Eco / Trail / Sport / Race with one-tap apply
-- **Power Curve Editor** — 3-point low/mid/high RPM tuning curve
 - **Ride Stats** — session log with distance, time, avg/top speed, Wh used
 - **Raw Debug Screen** — live hex packet dump with CRC verification
 - **Stock Backup & Restore** — auto-backup on first connect, one-tap restore
 - **Safety Warnings** — motion lockout on tuning writes, explicit confirmation dialogs
+- **Cross-platform** — iOS, Android, macOS, Windows, Linux
 
 ## Supported Hardware
 
-The app communicates with **FarDriver ND-series Bluetooth programming dongles** (cheap BLE UART adapters, device names often contain "YuanQ", "FOC", or "FarDriver"). These use BLE UART service:
+The app communicates with **FarDriver ND-series Bluetooth programming dongles** (BLE UART adapters, device names often contain "YuanQ", "FOC", or "FarDriver"). These use BLE UART service:
 
 - Service UUID: `0000FFE0-0000-1000-8000-00805F9B34FB`
 - Characteristic UUID: `0000FFE1-0000-1000-8000-00805F9B34FB`
 
-> **Classic BT SPP note:** Some older dongles use classic Bluetooth SPP/RFCOMM. These work on Android with `flutter_bluetooth_serial` but are **not supported on iOS** (Apple restricts classic BT to MFi-certified accessories). Use a BLE UART dongle for full iOS + Android support.
+> **Classic BT SPP note:** Some older dongles use classic Bluetooth SPP/RFCOMM. These work on Android but are **not supported on iOS** (Apple restricts classic BT to MFi-certified accessories). Use a BLE UART dongle for full cross-platform support.
 
 ## Protocol
 
@@ -35,41 +35,44 @@ Based on the reverse-engineered protocol from [jackhumbert/fardriver-controllers
 ### Prerequisites
 
 - Flutter SDK 3.2+
-- Xcode 15+ (iOS)
+- Xcode 15+ (iOS / macOS)
 - Android Studio / Android SDK 21+
 
 ### Quick Start
 
 ```bash
-# 1. Clone / copy project
-cd vargtune
+# 1. Clone the repo
+git clone https://github.com/caydenchapple/Biketunes.git
+cd Biketunes
 
-# 2. Generate Flutter platform scaffolding (if not already present)
-flutter create . --project-name vargtune --org com.vargtune
-
-# 3. Install dependencies
+# 2. Install dependencies
 flutter pub get
 
-# 4. Run code generation (Riverpod providers)
+# 3. Run code generation (Riverpod providers)
 dart run build_runner build --delete-conflicting-outputs
 
-# 5. Run on device
+# 4. Run on device
 flutter run
 ```
 
 ### iOS Setup
 
-Add to `ios/Runner/Info.plist` (already included in this repo):
+`ios/Runner/Info.plist` already includes the required Bluetooth keys:
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>VargTune needs Bluetooth to connect to your FarDriver controller dongle.</string>
+<string>BikeTunes needs Bluetooth to connect to your FarDriver controller dongle.</string>
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>VargTune needs Bluetooth to connect to your FarDriver controller dongle.</string>
+<string>BikeTunes needs Bluetooth to connect to your FarDriver controller dongle.</string>
 ```
 
-Set minimum iOS deployment target to 12.0 in `ios/Podfile`:
-```ruby
-platform :ios, '12.0'
+### macOS Setup
+
+`macos/Runner/DebugProfile.entitlements` and `Release.entitlements` already include:
+```xml
+<key>com.apple.security.device.bluetooth</key>
+<true/>
+<key>com.apple.security.network.client</key>
+<true/>
 ```
 
 ### Android Setup
@@ -78,6 +81,11 @@ Already configured in `AndroidManifest.xml`:
 - `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` (Android 12+)
 - `ACCESS_FINE_LOCATION` (required for BLE scanning pre-Android 12)
 - `minSdkVersion 21`
+
+### Windows / Linux
+
+- **Windows 10+**: uses WinRT Bluetooth API, no extra config needed
+- **Linux**: requires BlueZ (`sudo apt install bluez`)
 
 ## Tuning Safely
 
@@ -91,7 +99,7 @@ Already configured in `AndroidManifest.xml`:
 ## Architecture
 
 ```
-BluetoothService (flutter_blue_plus)
+DongleService (flutter_blue_plus)
   └─ raw BLE bytes
       └─ PacketParser (CRC verify + address decode)
           └─ ControllerStateNotifier (Riverpod)
